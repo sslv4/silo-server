@@ -821,7 +821,7 @@ func TestCollectAudiobookRootScansTreatsVanishedBookFolderAsEmpty(t *testing.T) 
 	// The encoded scope must also decode its parent before checking it.
 	author := filepath.Join(library, "A\xe5thor")
 	if err := os.MkdirAll(author, 0o755); err != nil {
-		t.Fatal(err)
+		t.Skipf("file system rejects non-UTF-8 names: %v", err)
 	}
 	missingLibrary := filepath.Join(t.TempDir(), "unmounted")
 	// A dangling book symlink with a non-UTF-8 name: the scope is the encoded

@@ -653,7 +653,7 @@ func TestExecuteSyncsSidecarWithNonUTF8Name(t *testing.T) {
 	data := f.svc.content.(*fakeSubtitles).data
 	raw := filepath.Join(t.TempDir(), "B\xe5rd.en.srt")
 	if err := os.WriteFile(raw, data, 0o600); err != nil {
-		t.Fatal(err)
+		t.Skipf("file system rejects non-UTF-8 names: %v", err)
 	}
 	sidecar := models.ExternalSubtitle{Path: fspath.Encode(raw), Language: "en", Format: "srt"}
 	f.svc.files.(fakeFiles).file.ExternalSubtitles = []models.ExternalSubtitle{sidecar}

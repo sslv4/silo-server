@@ -158,8 +158,23 @@ func TestExternalSubtitleModelsCarryHearingImpaired(t *testing.T) {
 	}
 }
 
+// skipIfCaseInsensitiveFS skips tests that need case variants of one name to
+// be distinct files.
+func skipIfCaseInsensitiveFS(t *testing.T, dir string) {
+	t.Helper()
+	probe := filepath.Join(dir, "silo-case-probe")
+	if err := os.WriteFile(probe, nil, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	defer func() { _ = os.Remove(probe) }()
+	if _, err := os.Stat(filepath.Join(dir, "SILO-CASE-PROBE")); err == nil {
+		t.Skip("file system is case-insensitive")
+	}
+}
+
 func TestExternalSubtitleDirCacheReadsSubtitleFolders(t *testing.T) {
 	root := t.TempDir()
+	skipIfCaseInsensitiveFS(t, root)
 	for _, name := range []string{
 		"Movie (2020)/Movie.mkv",
 		"Movie (2020)/Movie-trailer.mkv",

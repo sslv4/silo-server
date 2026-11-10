@@ -34,6 +34,20 @@ func skipIfPermissionsIgnored(t *testing.T) {
 	}
 }
 
+// skipIfCaseInsensitiveFS skips tests that need case variants of one name to
+// be distinct files.
+func skipIfCaseInsensitiveFS(t *testing.T, dir string) {
+	t.Helper()
+	probe := filepath.Join(dir, "silo-case-probe")
+	if err := os.WriteFile(probe, nil, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	defer func() { _ = os.Remove(probe) }()
+	if _, err := os.Stat(filepath.Join(dir, "SILO-CASE-PROBE")); err == nil {
+		t.Skip("file system is case-insensitive")
+	}
+}
+
 // setMode changes path's mode and restores it when the test ends, so the
 // temporary directory can be removed.
 func setMode(t *testing.T, path string, mode os.FileMode) {
@@ -57,13 +71,14 @@ func TestFindItemNFO_Lookup(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		files       map[string]string // relative path -> content
-		mediaFiles  []string
-		sidecarDirs []string // relative; "." is the temp dir
-		contentType string
-		wantPath    string // relative; "" means no NFO
-		wantTitle   string
+		name          string
+		files         map[string]string // relative path -> content
+		mediaFiles    []string
+		sidecarDirs   []string // relative; "." is the temp dir
+		contentType   string
+		wantPath      string // relative; "" means no NFO
+		wantTitle     string
+		caseSensitive bool // needs case variants to be distinct files
 	}{
 		{
 			name:        "uppercase Movie.NFO in the movie folder",
@@ -104,11 +119,12 @@ func TestFindItemNFO_Lookup(t *testing.T) {
 				"MOVIE.nfo": `<movie><title>Shouting</title></movie>`,
 				"movie.nfo": `<movie><title>Exact</title></movie>`,
 			},
-			mediaFiles:  []string{"Film.mkv"},
-			sidecarDirs: []string{"."},
-			contentType: typeMovie,
-			wantPath:    "movie.nfo",
-			wantTitle:   "Exact",
+			mediaFiles:    []string{"Film.mkv"},
+			sidecarDirs:   []string{"."},
+			contentType:   typeMovie,
+			wantPath:      "movie.nfo",
+			wantTitle:     "Exact",
+			caseSensitive: true,
 		},
 		{
 			name: "basename wins over movie.nfo (Kodi order)",
@@ -173,6 +189,9 @@ func TestFindItemNFO_Lookup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			root := t.TempDir()
+			if tc.caseSensitive {
+				skipIfCaseInsensitiveFS(t, root)
+			}
 			for _, rel := range tc.mediaFiles {
 				writeFile(t, filepath.Join(root, rel), "video")
 			}
@@ -877,7 +896,11 @@ func TestFindItemNFO_TraverseOnlyFolderMissIsUnavailable(t *testing.T) {
 	t.Parallel()
 	skipIfPermissionsIgnored(t)
 
-	dir := filepath.Join(t.TempDir(), "Film (2001)")
+	base := t.TempDir()
+	// A case-insensitive lookup opens MOVIE.NFO directly, without the listing
+	// the unreadable directory denies.
+	skipIfCaseInsensitiveFS(t, base)
+	dir := filepath.Join(base, "Film (2001)")
 	writeFile(t, filepath.Join(dir, "MOVIE.NFO"), `<movie><title>Hidden</title></movie>`)
 	writeFile(t, filepath.Join(dir, "Film.mkv"), "video")
 	if err := os.Chmod(dir, 0o311); err != nil {

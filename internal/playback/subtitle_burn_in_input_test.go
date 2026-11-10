@@ -91,6 +91,11 @@ func TestPrepareSubtitleFilterInputStagesTextTrack(t *testing.T) {
 	if err != nil {
 		t.Skip("ffmpeg not installed")
 	}
+	// Burn-in needs the libass filters, which a minimal FFmpeg build omits.
+	filters, err := exec.Command(ffmpeg, "-hide_banner", "-filters").Output()
+	if err != nil || !bytes.Contains(filters, []byte(" subtitles ")) {
+		t.Skip("ffmpeg has no subtitles filter")
+	}
 	// More fonts than the client font bundle takes: libass needs them all.
 	for _, tc := range []struct {
 		start float64
