@@ -521,6 +521,11 @@ func detectTotalMemoryBytes() (int64, string, error) {
 		return mem, "/host/proc/meminfo", nil
 	}
 
+	// Platforms without /proc report their own way; on macOS that is sysctl.
+	if mem, source, ok := platformTotalMemoryBytes(); ok {
+		return mem, source, nil
+	}
+
 	mem, err := nodemetrics.ReadMeminfoTotalBytes("/proc/meminfo")
 	if err != nil {
 		return 0, "", err
