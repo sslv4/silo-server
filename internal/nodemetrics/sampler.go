@@ -83,6 +83,10 @@ type Sampler struct {
 	cgroupMemoryDetails *CgroupMemoryStats
 	now                 func() time.Time
 	goos                string
+	// prevPlatform* hold the previous cumulative CPU ticks on hosts sampled
+	// through platform APIs, so a busy percentage can be a delta.
+	prevPlatformBusy  uint64
+	prevPlatformTotal uint64
 	// scratchDirFn is the live source; scratchDir is what it answered for the
 	// pass in flight, resolved once in diskPaths so the three readers below
 	// cannot disagree about which mount is the scratch one mid-pass. Owned by
@@ -247,8 +251,12 @@ func (s *Sampler) Start(ctx context.Context) {
 
 // sample takes one reading and publishes it.
 func (s *Sampler) sample(ctx context.Context) {
-	if s.goos != "linux" {
+	if s.goos != "linux" && !platformSamplingSupported {
 		s.snapshot.Store(&Snapshot{})
+		return
+	}
+	if s.goos != "linux" {
+		s.snapshot.Store(s.samplePlatform(ctx))
 		return
 	}
 	now := s.now()

@@ -2,7 +2,6 @@ package apiv2
 
 import (
 	"context"
-	"runtime"
 	"time"
 
 	"github.com/Silo-Server/silo-server/internal/buildinfo"
@@ -82,7 +81,7 @@ func registerAdminSystem(reg *Registry) {
 		state := StateAvailable
 		if reg.deps.AdminResourceSampler == nil {
 			state = StateNotConfigured
-		} else if runtime.GOOS != "linux" {
+		} else if !nodemetrics.SamplingSupported() {
 			state = StateUnsupported
 		}
 		return &AdminResourceCapabilitiesOutput{Body: AdminResourceCapabilities{Capability: Capability{State: state}, InstanceAttribution: true, ProcessResources: true, CgroupResources: true, SampleFreshness: true}}, nil

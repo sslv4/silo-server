@@ -1,4 +1,4 @@
-//go:build !linux
+//go:build !linux && !darwin
 
 package librarymonitor
 
@@ -11,7 +11,7 @@ import (
 // monitoring is Linux only; every visible root reports unsupported_platform.
 const platformSupported = false
 
-var errUnsupportedPlatform = errors.New("real-time monitoring needs Linux")
+var errUnsupportedPlatform = errors.New("real-time monitoring needs Linux or macOS")
 
 func classifyRoot(string) (fsClass, error) { return fsClass{}, errUnsupportedPlatform }
 
